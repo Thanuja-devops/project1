@@ -7,12 +7,13 @@ pipeline {
     }
 
     environment {
-        NEXUS_URL = "http://172.31.15.25:8081"       // Removed extra quotes
+        NEXUS_URL = "http://172.31.15.25:8081"         // Nexus Maven URL
         NEXUS_MAVEN_REPO = "maven-releases"
-        NEXUS_DOCKER_REGISTRY = "172.31.15.25:8083" // Removed extra quotes
+        NEXUS_DOCKER_REGISTRY = "172.31.15.25:8083"   // Nexus Docker registry
 
         APP_NAME = "country-chicken-backend"
         IMAGE_TAG = "${BUILD_NUMBER}"
+        MAVEN_SETTINGS = "/var/lib/jenkins/.m2/settings.xml" // Path to settings.xml
     }
 
     stages {
@@ -25,21 +26,17 @@ pipeline {
 
         stage('Maven Build') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                sh "mvn clean package -DskipTests -s ${MAVEN_SETTINGS}"
             }
         }
 
         stage('Publish JAR to Nexus') {
             steps {
-                withMaven(
-                    maven: '3.9.11', 
-                    mavenSettingsConfig: 'jenkins-settings' // settings.xml with Nexus credentials
-                ) {
-                    sh """
-                        mvn deploy -DskipTests \
-                        -DaltDeploymentRepository=nexus-releases::default::${NEXUS_URL}/repository/${NEXUS_MAVEN_REPO}
-                    """
-                }
+                sh """
+                    mvn deploy -DskipTests \
+                    -DaltDeploymentRepository=nexus-releases::default::${NEXUS_URL}/repository/${NEXUS_MAVEN_REPO} \
+                    -s ${MAVEN_SETTINGS}
+                """
             }
         }
 
@@ -52,8 +49,8 @@ pipeline {
         stage('Docker Push to Nexus') {
             steps {
                 withCredentials([usernamePassword(
-                    credentialsId: 'nexus-docker-creds',
-                    usernameVariable: 'NEXUS_USER',
+                    credentialsId: 'nexus-docker-creds', 
+                    usernameVariable: 'NEXUS_USER', 
                     passwordVariable: 'NEXUS_PASS'
                 )]) {
                     sh """
@@ -67,6 +64,7 @@ pipeline {
 
     post {
         always {
+            echo "Cleaning Docker cache..."
             sh 'docker system prune -f'
         }
     }
