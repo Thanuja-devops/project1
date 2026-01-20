@@ -53,21 +53,14 @@ pipeline {
             }
         }
 
-        stage('Push Docker Image') {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'nexus-docker-creds',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    sh """
-                    echo "$DOCKER_PASS" | docker login ${NEXUS_DOCKER_URL} -u "$DOCKER_USER" --password-stdin
-                    docker push ${NEXUS_DOCKER_URL}/${APP_NAME}:${VERSION}
-                    docker logout ${NEXUS_DOCKER_URL}
-                    """
-                }
-            }
-        }
+       stage('Push Docker Image') {
+           steps {
+               sh """
+               docker push ${NEXUS_DOCKER_URL}/${APP_NAME}:${VERSION}
+               """
+           }
+      }
+
     }
 
     post {
