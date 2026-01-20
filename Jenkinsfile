@@ -19,7 +19,7 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'YOUR_GIT_REPO_URL'
+                git branch: 'main', url: 'https://github.com/Thanuja-devops/project1.git'
             }
         }
 
