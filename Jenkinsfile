@@ -7,13 +7,13 @@ pipeline {
     }
 
     environment {
-        NEXUS_URL = "http://172.31.15.25:8081"         // Nexus Maven URL
+        NEXUS_URL = "http://172.31.15.25:8081"        // Nexus Maven URL
         NEXUS_MAVEN_REPO = "maven-releases"
-        NEXUS_DOCKER_REGISTRY = "172.31.15.25:8083"   // Nexus Docker registry
+        NEXUS_DOCKER_REGISTRY = "172.31.15.25:8083"  // Nexus Docker registry
 
         APP_NAME = "country-chicken-backend"
         IMAGE_TAG = "${BUILD_NUMBER}"
-        MAVEN_SETTINGS = "/var/lib/jenkins/.m2/settings.xml" // Path to settings.xml
+        MAVEN_SETTINGS = "/var/lib/jenkins/.m2/settings.xml" // Maven settings with credentials
     }
 
     stages {
