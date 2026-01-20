@@ -3,73 +3,68 @@ pipeline {
 
     tools {
         maven '3.9.11'
-        jdk 'java17'
+        jdk   'java17'
     }
 
     environment {
-        APP_NAME = 'country-chicken-backend'
-        NEXUS_DOCKER_URL = '172.31.15.25:8083'
-        VERSION = ''
+        NEXUS_URL = "http://NEXUS_SERVER_IP:8081"
+        NEXUS_MAVEN_REPO = "maven-releases"
+        NEXUS_DOCKER_REGISTRY = "NEXUS_SERVER_IP:8083"
+
+        APP_NAME = "country-chicken-backend"
+        IMAGE_TAG = "${BUILD_NUMBER}"
     }
 
     stages {
 
         stage('Checkout') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/Thanuja-devops/project1.git'
+                git branch: 'main', url: 'YOUR_GIT_REPO_URL'
             }
         }
 
-        stage('Read Version') {
+        stage('Maven Build') {
             steps {
-                script {
-                    VERSION = sh(
-                        script: "mvn help:evaluate -Dexpression=project.version -q -DforceStdout",
-                        returnStdout: true
-                    ).trim()
-
-                    if (!VERSION) {
-                        error "Version not found in pom.xml"
-                    }
-
-                    echo "Building version: ${VERSION}"
-                }
+                sh 'mvn clean package -DskipTests'
             }
         }
 
-        stage('Build & Deploy JAR to Nexus') {
-            steps {
-                sh 'mvn clean deploy -DskipTests'
-            }
-        }
-
-        stage('Build Docker Image') {
+        stage('Publish JAR to Nexus') {
             steps {
                 sh """
-                docker build \
-                  -t ${NEXUS_DOCKER_URL}/${APP_NAME}:${VERSION} .
+                mvn deploy -DskipTests \
+                -DaltDeploymentRepository=nexus::default::${NEXUS_URL}/repository/${NEXUS_MAVEN_REPO}
                 """
             }
         }
 
-       stage('Push Docker Image') {
-           steps {
-               sh """
-               docker push ${NEXUS_DOCKER_URL}/${APP_NAME}:${VERSION}
-               """
-           }
-      }
+        stage('Docker Build') {
+            steps {
+                sh """
+                docker build -t ${NEXUS_DOCKER_REGISTRY}/${APP_NAME}:${IMAGE_TAG} .
+                """
+            }
+        }
 
+        stage('Docker Push to Nexus') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'nexus-docker-creds',
+                    usernameVariable: 'NEXUS_USER',
+                    passwordVariable: 'NEXUS_PASS'
+                )]) {
+                    sh """
+                    docker login ${NEXUS_DOCKER_REGISTRY} -u ${NEXUS_USER} -p ${NEXUS_PASS}
+                    docker push ${NEXUS_DOCKER_REGISTRY}/${APP_NAME}:${IMAGE_TAG}
+                    """
+                }
+            }
+        }
     }
 
     post {
-        success {
-            echo "Build, Nexus deploy & Docker push successful"
-        }
         always {
             sh 'docker system prune -f'
-            cleanWs()
         }
     }
 }
