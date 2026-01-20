@@ -7,9 +7,9 @@ pipeline {
     }
 
     environment {
-        NEXUS_URL = "http://NEXUS_SERVER_IP:8081"
+        NEXUS_URL = "http://'172.31.15.25:8081'"
         NEXUS_MAVEN_REPO = "maven-releases"
-        NEXUS_DOCKER_REGISTRY = "NEXUS_SERVER_IP:8083"
+        NEXUS_DOCKER_REGISTRY = "http://'172.31.15.25:8083"
 
         APP_NAME = "country-chicken-backend"
         IMAGE_TAG = "${BUILD_NUMBER}"
