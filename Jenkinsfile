@@ -7,9 +7,9 @@ pipeline {
     }
 
     environment {
-        NEXUS_URL = "http://'172.31.15.25:8081'"
+        NEXUS_URL = "http://172.31.15.25:8081"       // Removed extra quotes
         NEXUS_MAVEN_REPO = "maven-releases"
-        NEXUS_DOCKER_REGISTRY = "http://'172.31.15.25:8083"
+        NEXUS_DOCKER_REGISTRY = "172.31.15.25:8083" // Removed extra quotes
 
         APP_NAME = "country-chicken-backend"
         IMAGE_TAG = "${BUILD_NUMBER}"
@@ -31,18 +31,21 @@ pipeline {
 
         stage('Publish JAR to Nexus') {
             steps {
-                sh """
-                mvn deploy -DskipTests \
-                -DaltDeploymentRepository=nexus::default::${NEXUS_URL}/repository/${NEXUS_MAVEN_REPO}
-                """
+                withMaven(
+                    maven: '3.9.11', 
+                    mavenSettingsConfig: 'jenkins-settings' // settings.xml with Nexus credentials
+                ) {
+                    sh """
+                        mvn deploy -DskipTests \
+                        -DaltDeploymentRepository=nexus-releases::default::${NEXUS_URL}/repository/${NEXUS_MAVEN_REPO}
+                    """
+                }
             }
         }
 
         stage('Docker Build') {
             steps {
-                sh """
-                docker build -t ${NEXUS_DOCKER_REGISTRY}/${APP_NAME}:${IMAGE_TAG} .
-                """
+                sh "docker build -t ${NEXUS_DOCKER_REGISTRY}/${APP_NAME}:${IMAGE_TAG} ."
             }
         }
 
@@ -54,8 +57,8 @@ pipeline {
                     passwordVariable: 'NEXUS_PASS'
                 )]) {
                     sh """
-                    docker login ${NEXUS_DOCKER_REGISTRY} -u ${NEXUS_USER} -p ${NEXUS_PASS}
-                    docker push ${NEXUS_DOCKER_REGISTRY}/${APP_NAME}:${IMAGE_TAG}
+                        docker login ${NEXUS_DOCKER_REGISTRY} -u ${NEXUS_USER} -p ${NEXUS_PASS}
+                        docker push ${NEXUS_DOCKER_REGISTRY}/${APP_NAME}:${IMAGE_TAG}
                     """
                 }
             }
